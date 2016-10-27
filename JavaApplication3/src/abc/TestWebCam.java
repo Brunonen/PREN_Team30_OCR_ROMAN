@@ -143,32 +143,14 @@ public class TestWebCam extends JPanel implements ActionListener {
                         }
                         foundImage = newFoundImage;
                     }
-                   
-                   // / Localizing the best match with minMaxLoc
-                    /*MinMaxLocResult mmr = Core.minMaxLoc(result);
 
-                    Point matchLoc;
-                    if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
-                       matchLoc = mmr.minLoc;
-                    } else {
-                       matchLoc = mmr.maxLoc;
-                    }
-                    double threshold = 1.0 * Math.pow(10, 9); 
-                    //System.out.println("minLoc: " + mmr.minLoc + "\t maxLoc: " + mmr.maxLoc + " || \t minVal: " + mmr.minVal + "\t maxVal: "+ mmr.maxVal);
-
-                    if((double)(mmr.minVal) < (double)(threshold)){
-                        System.out.println("found III");
-                    }
-                   // / Show me what you got
-
-                    */
                     mat2Buf.setMatrix(webcam_image, ".jpg");
                     toc.setimage(mat2Buf.getBufferedImage());
                     toc.repaint();
-                } else {
-                    System.out.println("problems with webcam image capture");
-                    try{
-                        Thread.sleep(1000);
+                } else {  
+                  System.out.println("problems with webcam image capture");
+                    try{ 
+                       Thread.sleep(1000);
                     }catch(InterruptedException ex){
                         System.out.println(ex.getMessage());
                     }
