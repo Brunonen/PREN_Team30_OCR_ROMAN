@@ -101,7 +101,7 @@ public class TestWebCam extends JPanel implements ActionListener {
         } catch (Exception xx) {
             xx.printStackTrace();
         }
-        if (capture.open(0)) { //open(0) opens your Laptop webcam, open(1) opens USB attached Webcam
+        if (capture.open(1)) { //open(0) opens your Laptop webcam, open(1) opens USB attached Webcam
             while (true) {
                 capture.read(webcam_image);
                 if (!webcam_image.empty()) {
@@ -158,15 +158,15 @@ public class TestWebCam extends JPanel implements ActionListener {
                      
                     if(barCount > 2){
                         System.out.println("Found Bars");
-
-                        ITesseract instance = new Tesseract();
                         try{
+                            ITesseract instance = new Tesseract();
+
                             MatToBufImg webcamImageBuff = new MatToBufImg();
                             webcamImageBuff.setMatrix(webcam_image, ".jpg");
                             String result = instance.doOCR(webcamImageBuff.getBufferedImage());
                             System.out.println("found: " + result);
                         }catch(Exception e){
-                            System.err.println(e.getMessage());
+                           // System.err.println(e.getMessage());
                         }
 /*
                         Mat[] templates = new Mat[5];
