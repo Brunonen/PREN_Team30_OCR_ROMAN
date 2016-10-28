@@ -4,10 +4,12 @@
  */
 package abc;
 
+import com.sun.javafx.geom.Vec3f;
+import com.sun.javafx.geom.Vec4f;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.List;
+import java.util.List;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -16,6 +18,7 @@ import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -29,10 +32,12 @@ import org.opencv.core.Core;
 import org.opencv.core.Core.MinMaxLocResult;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.highgui.VideoCapture;
@@ -91,15 +96,21 @@ public class TestWebCam extends JPanel implements ActionListener {
         } catch (Exception xx) {
             xx.printStackTrace();
         }
-        if (capture.open(0)) { //open(0) opens your Laptop webcam, open(1) opens USB attached Webcam
+        if (capture.open(1)) { //open(0) opens your Laptop webcam, open(1) opens USB attached Webcam
             while (true) {
                 capture.read(webcam_image);
                 if (!webcam_image.empty()) {
-                   
+
+                    
                     String thisPath = TestWebCam.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
                     thisPath = thisPath.substring(1, thisPath.length());
                     thisPath = thisPath.replace("/", "\\");
 
+                    //templateMatchingWithRed(webcam_image, thisPath);
+                    
+                    Mat test = detectRedRects(webcam_image);
+                    //Imgproc.drawContours(webcam_image, contours, -1, new Scalar(255,255,0));
+                    /*
                     Mat templ = Highgui.imread(thisPath+"abc\\Roman_3.jpg");
                     Mat[] templates = new Mat[5];
                     for(int count = 0; count < 5; count++){
@@ -142,9 +153,9 @@ public class TestWebCam extends JPanel implements ActionListener {
                             System.out.println("new found Roman "+ newFoundImage);
                         }
                         foundImage = newFoundImage;
-                    }
+                    }*/
 
-                    mat2Buf.setMatrix(webcam_image, ".jpg");
+                    mat2Buf.setMatrix(test, ".jpg");
                     toc.setimage(mat2Buf.getBufferedImage());
                     toc.repaint();
                 } else {  
@@ -160,6 +171,50 @@ public class TestWebCam extends JPanel implements ActionListener {
         capture.release();
     }
 
+    private static void templateMatchingWithRed(Mat webcam_image, String thisPath){
+      
+        Mat templ = Highgui.imread(thisPath+"abc\\Red_Bars.png");
+        
+        int match_method = Imgproc.TM_SQDIFF;
+        // / Create the result matrix
+        int result_cols = webcam_image.cols() - templ.cols() + 1;
+        int result_rows = webcam_image.rows() - templ.rows() + 1;
+        Mat result = new Mat(result_rows, result_cols, CvType.CV_32FC1);
+        
+        Imgproc.matchTemplate(webcam_image, templ, result, match_method);
+        MinMaxLocResult mmr_Array = Core.minMaxLoc(result);
+        Point matchLoc_Array;
+         if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
+            matchLoc_Array = mmr_Array.minLoc;
+         } else {
+            matchLoc_Array = mmr_Array.maxLoc;
+         }
+            Core.rectangle(webcam_image, matchLoc_Array, new Point(matchLoc_Array.x + templ.cols(),
+            matchLoc_Array.y + templ.rows()), new Scalar(0, 255, 0));
+    }
+    
+    private static Mat detectRedRects(Mat webcam_image){
+
+
+        Mat hsv_image = new Mat();
+        Imgproc.cvtColor(webcam_image, hsv_image, Imgproc.COLOR_BGR2HSV);
+
+        Mat lower_red_hue_range = new Mat();
+        Mat upper_red_hue_range = new Mat();
+        
+        Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(10, 255, 255), lower_red_hue_range);
+        Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 255, 255), upper_red_hue_range);
+
+        
+        Mat red_hue_image = new Mat();
+        Core.addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
+        Imgproc.GaussianBlur(red_hue_image, red_hue_image, new Size(9, 9), 2, 2);
+                
+        List<MatOfPoint> contours = new ArrayList<>();
+        Mat hirarchy = new Mat();
+        return red_hue_image;
+    }
+    
     @Override
     public void actionPerformed(ActionEvent e) {
         String ans = JOptionPane.showInputDialog(null, "Color/Grey");
