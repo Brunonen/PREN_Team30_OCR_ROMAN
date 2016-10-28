@@ -116,11 +116,11 @@ public class TestWebCam extends JPanel implements ActionListener {
                     Mat lower_red_hue_range = new Mat();
                     Mat upper_red_hue_range = new Mat();
 
-                    /*Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(1, 227, 255), lower_red_hue_range);
-                    Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 227, 255), upper_red_hue_range);*/
+                    Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(1, 227, 255), lower_red_hue_range);
+                    Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 227, 255), upper_red_hue_range);
 
-                    Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(10, 255, 255), lower_red_hue_range);
-                    Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 255, 255), upper_red_hue_range);
+                    /*Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(10, 255, 255), lower_red_hue_range);
+                    Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 255, 255), upper_red_hue_range);*/
 
                     Mat red_hue_image = new Mat();
                     Core.addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
@@ -135,6 +135,7 @@ public class TestWebCam extends JPanel implements ActionListener {
                     MatOfPoint2f approxCurve = new MatOfPoint2f();
                      int x = 1;
                      int barCount = 0;
+
                      //For each contour found
                      for (int i=0; i<contours.size(); i++)
                      {
@@ -149,9 +150,11 @@ public class TestWebCam extends JPanel implements ActionListener {
 
                          // Get bounding rect of contour
                          Rect rect = Imgproc.boundingRect(points);
-                        if(rect.height > 50 ) {
+                        if(rect.height > 200 ) {
                           // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
                             barCount++; 
+                            System.out.print("x: " + rect.x + " y: "+rect.y+ " h: " + rect.height + " w: " + rect.width + "\n");
+                            Core.rectangle(webcam_image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(255, 0, 0, 255), 3);
                         }
                          
                      }
