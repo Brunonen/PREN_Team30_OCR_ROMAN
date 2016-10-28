@@ -33,6 +33,7 @@ import org.opencv.core.Core.MinMaxLocResult;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -108,54 +109,101 @@ public class TestWebCam extends JPanel implements ActionListener {
 
                     //templateMatchingWithRed(webcam_image, thisPath);
                     
-                    Mat test = detectRedRects(webcam_image);
-                    //Imgproc.drawContours(webcam_image, contours, -1, new Scalar(255,255,0));
-                    /*
-                    Mat templ = Highgui.imread(thisPath+"abc\\Roman_3.jpg");
-                    Mat[] templates = new Mat[5];
-                    for(int count = 0; count < 5; count++){
-                        templates[count] = Highgui.imread(thisPath+"abc\\Roman_"+(count+1)+".jpg");
-                    }
+                    //Mat test = detectRedRects(webcam_image);
+                    Mat hsv_image = new Mat();
+                    Imgproc.cvtColor(webcam_image, hsv_image, Imgproc.COLOR_BGR2HSV);
+
+                    Mat lower_red_hue_range = new Mat();
+                    Mat upper_red_hue_range = new Mat();
+
+                    Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(1, 227, 255), lower_red_hue_range);
+                    Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 227, 255), upper_red_hue_range);
+
+
+                    Mat red_hue_image = new Mat();
+                    Core.addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
+                    Imgproc.GaussianBlur(red_hue_image, red_hue_image, new Size(9, 9), 2, 2);
+
+                    List<MatOfPoint> contours = new ArrayList<>();
+                    Mat hirarchy = new Mat();
                     
-                    int match_method = Imgproc.TM_SQDIFF;
-                    // / Create the result matrix
-                    int result_cols = webcam_image.cols() - templ.cols() + 1;
-                    int result_rows = webcam_image.rows() - templ.rows() + 1;
-                    Mat result = new Mat(result_rows, result_cols, CvType.CV_32FC1);
+                    Imgproc.findContours(red_hue_image, contours, new Mat(), Imgproc.RETR_LIST,Imgproc.CHAIN_APPROX_SIMPLE);
+                    MatOfPoint2f approxCurve = new MatOfPoint2f();
+                     int x = 1;
+                     int barCount = 0;
+                     //For each contour found
+                     for (int i=0; i<contours.size(); i++)
+                     {
+                         //Convert contours(i) from MatOfPoint to MatOfPoint2f
+                         MatOfPoint2f contour2f = new MatOfPoint2f( contours.get(i).toArray() );
+                         //Processing on mMOP2f1 which is in type MatOfPoint2f
+                         double approxDistance = Imgproc.arcLength(contour2f, true)*0.002;
+                         Imgproc.approxPolyDP(contour2f, approxCurve, approxDistance, true);
 
-                   // / Do the Matching
-                   //Imgproc.matchTemplate(webcam_image, templates[3], result, match_method);
-                   // Core.normalize(result, result, 0, 1, Core.NORM_MINMAX, -1, new Mat());
-                   int counter = 1;
-                   int newFoundImage = 0;
-                   for(Mat p : templates){
-                       Imgproc.matchTemplate(webcam_image, p, result, match_method);
-                       MinMaxLocResult mmr_Array = Core.minMaxLoc(result);
-                       Point matchLoc_Array;
-                        if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
-                           matchLoc_Array = mmr_Array.minLoc;
-                        } else {
-                           matchLoc_Array = mmr_Array.maxLoc;
-                        }
-                        double threshold = 1.0 * Math.pow(10, 9); 
-                        
-                        if((double)(mmr_Array.minVal) < (double)(threshold)){
-                            
-                           Core.rectangle(webcam_image, matchLoc_Array, new Point(matchLoc_Array.x + templ.cols(),
-                           matchLoc_Array.y + templ.rows()), new Scalar(0, 255, 0));
-                           newFoundImage = counter;
-                        }
-                        counter++;
-                   }
-                   
-                    if(foundImage != newFoundImage){
-                        if(newFoundImage != 0){
-                            System.out.println("new found Roman "+ newFoundImage);
-                        }
-                        foundImage = newFoundImage;
-                    }*/
+                         //Convert back to MatOfPoint
+                         MatOfPoint points = new MatOfPoint( approxCurve.toArray() );
 
-                    mat2Buf.setMatrix(test, ".jpg");
+                         // Get bounding rect of contour
+                         Rect rect = Imgproc.boundingRect(points);
+                        if(rect.height > 100 ) {
+                          // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
+                            barCount++; 
+                        }
+                         
+                     }
+                     
+                    if(barCount > 2){
+                        System.out.println("Found Bars");
+                        Mat[] templates = new Mat[5];
+                        for(int count = 0; count < 5; count++){
+                            templates[count] = Highgui.imread(thisPath+"abc\\Roman_"+(count+1)+".jpg");
+                        }
+
+                        int match_method = Imgproc.TM_SQDIFF;
+
+
+                       // / Do the Matching
+                       //Imgproc.matchTemplate(webcam_image, templates[3], result, match_method);
+                       // Core.normalize(result, result, 0, 1, Core.NORM_MINMAX, -1, new Mat());
+                       int counter = 1;
+                       int newFoundImage = 0;
+                       for(Mat p : templates){
+                            // / Create the result matrix
+                            int result_cols = webcam_image.cols() - p.cols() + 1;
+                            int result_rows = webcam_image.rows() - p.rows() + 1;
+                            Mat result = new Mat(result_rows, result_cols, CvType.CV_32FC1);
+                           Imgproc.matchTemplate(webcam_image, p, result, match_method);
+                           MinMaxLocResult mmr_Array = Core.minMaxLoc(result);
+                           Point matchLoc_Array;
+                            if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
+                               matchLoc_Array = mmr_Array.minLoc;
+                            } else {
+                               matchLoc_Array = mmr_Array.maxLoc;
+                            }
+                            double threshold = 1.0 * Math.pow(10, 9); 
+
+                            if((double)(mmr_Array.minVal) < (double)(threshold)){
+
+                               Core.rectangle(webcam_image, matchLoc_Array, new Point(matchLoc_Array.x + p.cols(),
+                               matchLoc_Array.y + p.rows()), new Scalar(0, 255, 0));
+                               newFoundImage = counter;
+                            }
+                            counter++;
+                       }
+
+                        if(foundImage != newFoundImage){
+                            if(newFoundImage != 0){
+                                System.out.println("new found Roman "+ newFoundImage);
+                            }
+                            foundImage = newFoundImage;
+                        } 
+                    }
+                    //Imgproc.drawContours(webcam_image, contours, -1, new Scalar(255,255,0));
+                    
+                    //Mat templ = Highgui.imread(thisPath+"abc\\Roman_3.jpg");
+
+
+                    mat2Buf.setMatrix(webcam_image, ".jpg");
                     toc.setimage(mat2Buf.getBufferedImage());
                     toc.repaint();
                 } else {  
@@ -193,27 +241,13 @@ public class TestWebCam extends JPanel implements ActionListener {
             matchLoc_Array.y + templ.rows()), new Scalar(0, 255, 0));
     }
     
-    private static Mat detectRedRects(Mat webcam_image){
+    /*private static Mat detectRedRects(Mat webcam_image){
 
-
-        Mat hsv_image = new Mat();
-        Imgproc.cvtColor(webcam_image, hsv_image, Imgproc.COLOR_BGR2HSV);
-
-        Mat lower_red_hue_range = new Mat();
-        Mat upper_red_hue_range = new Mat();
-        
-        Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(10, 255, 255), lower_red_hue_range);
-        Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 255, 255), upper_red_hue_range);
 
         
-        Mat red_hue_image = new Mat();
-        Core.addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
-        Imgproc.GaussianBlur(red_hue_image, red_hue_image, new Size(9, 9), 2, 2);
-                
-        List<MatOfPoint> contours = new ArrayList<>();
-        Mat hirarchy = new Mat();
         return red_hue_image;
-    }
+        
+    }*/
     
     @Override
     public void actionPerformed(ActionEvent e) {
