@@ -58,15 +58,16 @@ public class TestWebCam extends JPanel implements ActionListener {
     private BufferedImage image;
     private JButton button = new JButton("Reset Character Detection");
     int count = 1;
-    private int[] RomanCharacterCount = new int[15];
-    private int pictureEvalCount = 0;
+    private int[] RomanCharacterCount = new int[100];
+    private boolean characterEvaluated = false;
     private int lastFoundCharacter = 0;
-
+    private List<RomanCharacterPicture> picturesTaken;
 
 
     public TestWebCam() {
         super();
         button.addActionListener((ActionListener) this);
+        picturesTaken = new ArrayList<RomanCharacterPicture>();
         this.add(button);
     }
 
@@ -94,20 +95,28 @@ public class TestWebCam extends JPanel implements ActionListener {
         this.RomanCharacterCount[index]++;
     }
     
+    public List<RomanCharacterPicture> getPicturesTaken(){
+        return this.picturesTaken;
+    }
+    
+    public void setPicturesTaken(List<RomanCharacterPicture> picturesTaken){
+        this.picturesTaken = picturesTaken;
+    }
+    
+    public void addRomanNumberPicture(RomanCharacterPicture picture){
+        this.picturesTaken.add(picture);
+    }
+    
     public void setRomanCharacterCount(int[] RomanCharacterCount){
         this.RomanCharacterCount = RomanCharacterCount;
     }
 
-    public int getPictureEvalCount() {
-        return pictureEvalCount;
+    public boolean hasCharacterBeenEvaluated() {
+        return characterEvaluated;
     }
     
-    public void incrementPicutreEvalCount(){
-        pictureEvalCount++;
-    }
-
-    public void setPictureEvalCount(int pictureEvalCount) {
-        this.pictureEvalCount = pictureEvalCount;
+    public void setCharacterEvaluated(boolean characterEvaluated) {
+        this.characterEvaluated = characterEvaluated;
     }
     
     public void setLastFoundCharacter(int lastFoundCharacter) {
@@ -145,7 +154,7 @@ public class TestWebCam extends JPanel implements ActionListener {
             while (true) {
                 capture.read(webcam_image);
                 if (!webcam_image.empty()) {
-                    if(toc.getPictureEvalCount() < toc.getRomanCharacterCount().length){
+                    if(!toc.hasCharacterBeenEvaluated()){
                         String thisPath = TestWebCam.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
                         thisPath = thisPath.substring(1, thisPath.length());
                         thisPath = thisPath.replace("/", "\\");
@@ -175,7 +184,8 @@ public class TestWebCam extends JPanel implements ActionListener {
                          int barCount = 0;
                          List<Rect> foundRectangles = new ArrayList<>();
                          //For each contour found
-                         for (int i=0; i<contours.size(); i++)
+                         
+                         for (int i=0; i<contours.size() && barCount<=2; i++)
                          {
                              //Convert contours(i) from MatOfPoint to MatOfPoint2f
                              MatOfPoint2f contour2f = new MatOfPoint2f( contours.get(i).toArray() );
@@ -192,98 +202,55 @@ public class TestWebCam extends JPanel implements ActionListener {
                               // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
                                 barCount++; 
                                 //System.out.print("x: " + rect.x + " y: "+rect.y+ " h: " + rect.height + " w: " + rect.width + "\n");
-                                Core.rectangle(webcam_image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(255, 0, 0, 255), 3);
+                                //Core.rectangle(webcam_image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(255, 0, 0, 255), 3);
                                 foundRectangles.add(rect);
                             }
 
                          }
 
                         if(barCount == 2){
-                            //System.out.println("Found Bars");
-                            try{
-                                int x1, x2, y1, y2;
-                                if(foundRectangles.get(0).x < foundRectangles.get(1).x){
-                                    x1 = foundRectangles.get(0).x + foundRectangles.get(0).width;
-                                    x2 = foundRectangles.get(1).x;
-                                    y1 = foundRectangles.get(0).y;
-                                    y2 = foundRectangles.get(1).y + foundRectangles.get(1).height;
-                                }else{
-                                    x1 = foundRectangles.get(1).x + foundRectangles.get(1).width;
-                                    x2 = foundRectangles.get(0).x;
-                                    y1 = foundRectangles.get(1).y;
-                                    y2 = foundRectangles.get(0).y + foundRectangles.get(0).height; 
-                                }
-                                //Core.rectangle(webcam_image, new Point(x1, y1), new Point(x2, y2), new Scalar(0, 0, 255, 255), 3);
-
-                                ITesseract instance = new Tesseract();
-
-                                MatToBufImg webcamImageBuff = new MatToBufImg();
-
-                                webcamImageBuff.setMatrix(webcam_image, ".jpg");
-                                double heightRatio = (double)webcamImageBuff.getBufferedImage().getHeight() / (double)webcam_image.height();
-                                double widthRatio = (double)webcamImageBuff.getBufferedImage().getWidth() / (double)webcam_image.width();
-
-                                BufferedImage romanCharacter = webcamImageBuff.getBufferedImage().getSubimage((int)(x1 * widthRatio), (int)(y1 * heightRatio), (int)(widthRatio*(x2-x1)), (int)(heightRatio*(y2-y1)));
-
-
-                                //ImageIO.write(romanCharacter, "PNG", new FileOutputStream("dst.png"));
-                                String result = instance.doOCR(romanCharacter);
-
-                                int counterI = 0;
-                                for( int i=0; i<result.length(); i++ ) {
-                                    if( result.charAt(i) == 'I' || result.charAt(i) == 'l' || result.charAt(i) == '1' ) {
-                                        counterI++;
-                                    } 
-                                }
-
-                                int counterV = 0;
-                                for( int i=0; i<result.length(); i++ ) {
-                                    if( result.charAt(i) == 'V' || result.charAt(i) == 'v') {
-                                        counterV++;
-                                    } 
-                                }
-                                System.out.println("found: " + result +" count I : " + counterI + " count V: " + counterV);
-
-                                toc.incrementRomanCharacterCountIndex((counterI + (counterV * 5)));
-                                toc.incrementPicutreEvalCount();
-
-
-                            }catch(Exception e){
-
-                            }
+                           toc.addRomanNumberPicture(new RomanCharacterPicture(webcam_image, foundRectangles));
                         }
                     }
-                    if(toc.getPictureEvalCount() >= toc.getRomanCharacterCount().length){
-                        int maxOccurence = 0;
-                        int maxRomanCharacter = 0;
-                        int[] amountOfCharacter = toc.getRomanCharacterCount();
-                        for(int characterOccurenceCount = 1; characterOccurenceCount < amountOfCharacter.length; characterOccurenceCount++){
-                            if(maxOccurence < amountOfCharacter[characterOccurenceCount]){
-                                maxOccurence = amountOfCharacter[characterOccurenceCount];
-                                maxRomanCharacter = characterOccurenceCount;
+                    
+                    if(toc.getPicturesTaken().size() >= 15){
+                        if(!toc.hasCharacterBeenEvaluated()){
+                            for(RomanCharacterPicture rcp : toc.getPicturesTaken()){
+                                toc.incrementRomanCharacterCountIndex(rcp.evaluatePicture());
                             }
-                        }
-                        if(toc.getLastFoundCharacter() != maxRomanCharacter)
-                        {
-                            toc.setLastFoundCharacter(maxRomanCharacter);
-                            switch(maxRomanCharacter){
-                                case 1: System.out.println("Roman 1");
-                                break;
 
-                                case 2: System.out.println("Roman 2");
-                                break;
+                            int maxOccurence = 0;
+                            int maxRomanCharacter = 0;
+                            int[] amountOfCharacter = toc.getRomanCharacterCount();
+                            for(int characterOccurenceCount = 1; characterOccurenceCount < amountOfCharacter.length; characterOccurenceCount++){
+                                if(maxOccurence < amountOfCharacter[characterOccurenceCount]){
+                                    maxOccurence = amountOfCharacter[characterOccurenceCount];
+                                    maxRomanCharacter = characterOccurenceCount;
+                                }
+                            }
+                            if(toc.getLastFoundCharacter() != maxRomanCharacter)
+                            {
+                                toc.setLastFoundCharacter(maxRomanCharacter);
+                                switch(maxRomanCharacter){
+                                    case 1: System.out.println("Roman 1");
+                                    break;
 
-                                case 3: System.out.println("Roman 3");
-                                break;
+                                    case 2: System.out.println("Roman 2");
+                                    break;
 
-                                case 6: System.out.println("Roman 4");
-                                break;
+                                    case 3: System.out.println("Roman 3");
+                                    break;
 
-                                case 5: System.out.println("Roman 5");
-                                break;
+                                    case 6: System.out.println("Roman 4");
+                                    break;
 
-                                default: System.out.println("Couldn't find Character");
+                                    case 5: System.out.println("Roman 5");
+                                    break;
 
+                                    default: System.out.println("Couldn't find Character");
+
+                                }
+                                toc.setCharacterEvaluated(true);
                             }
                         }
                     }
@@ -393,8 +360,9 @@ public class TestWebCam extends JPanel implements ActionListener {
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        this.setRomanCharacterCount(new int[15]);
-        this.setPictureEvalCount(0);
+        this.setRomanCharacterCount(new int[100]);
+        this.setCharacterEvaluated(false);
         this.setLastFoundCharacter(0);
+        this.setPicturesTaken(new ArrayList<RomanCharacterPicture>());
     }
 }
