@@ -165,15 +165,19 @@ public class TestWebCam extends JPanel implements ActionListener {
                         Mat lower_red_hue_range = new Mat();
                         Mat upper_red_hue_range = new Mat();
 
-                        Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(1, 227, 255), lower_red_hue_range);
-                        Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 227, 255), upper_red_hue_range);
+                        Core.inRange(hsv_image, new Scalar(0,100,100), new Scalar(10, 255, 255), lower_red_hue_range);
+                        Core.inRange(hsv_image, new Scalar(160, 100, 100), new Scalar(179, 255, 255), upper_red_hue_range);
 
 
+                        //Core.inRange(hsv_image, new Scalar(0,0,0), new Scalar(180, 255, 30), lower_red_hue_range);
+                        //Core.inRange(hsv_image, new Scalar(0,0,10), new Scalar(180, 255, 40), upper_red_hue_range);
+                        
                         Mat red_hue_image = new Mat();
                         Core.addWeighted(lower_red_hue_range, 1.0, upper_red_hue_range, 1.0, 0.0, red_hue_image);
 
                         Imgproc.GaussianBlur(red_hue_image, red_hue_image, new Size(9, 9), 2, 2);
 
+                        
                         List<MatOfPoint> contours = new ArrayList<>();
                         Mat hirarchy = new Mat();
 
@@ -198,7 +202,7 @@ public class TestWebCam extends JPanel implements ActionListener {
 
                              // Get bounding rect of contour
                              Rect rect = Imgproc.boundingRect(points);
-                            if(rect.height > 200 ) {
+                            if(rect.height > 250 ) {
                               // draw enclosing rectangle (all same color, but you could use variable i to make them unique)
                                 barCount++; 
                                 //System.out.print("x: " + rect.x + " y: "+rect.y+ " h: " + rect.height + " w: " + rect.width + "\n");
@@ -213,7 +217,7 @@ public class TestWebCam extends JPanel implements ActionListener {
                         }
                     }
                     
-                    if(toc.getPicturesTaken().size() >= 15){
+                    if(toc.getPicturesTaken().size() >= 5){
                         if(!toc.hasCharacterBeenEvaluated()){
                             for(RomanCharacterPicture rcp : toc.getPicturesTaken()){
                                 toc.incrementRomanCharacterCountIndex(rcp.evaluatePicture());
@@ -250,11 +254,13 @@ public class TestWebCam extends JPanel implements ActionListener {
                                     default: System.out.println("Couldn't find Character");
 
                                 }
-                                toc.setCharacterEvaluated(true);
+
                             }
+                            toc.setCharacterEvaluated(true);
                         }
                     }
                     
+                    //mat2Buf.setMatrix(red_hue_image, ".jpg");
                     mat2Buf.setMatrix(webcam_image, ".jpg");
                     toc.setimage(mat2Buf.getBufferedImage());
 
